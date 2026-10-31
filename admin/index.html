@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Shop editor</title>
+<meta name="theme-color" content="#07090f">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Cpath d=%22M16 4l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L16 22.1l-7 3.7 1.3-7.9-5.7-5.6 7.9-1.1z%22 fill=%22%23f5c04a%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="admin.css?v=1793489423">
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span class="star">★</span><span><b>Shop editor</b><small id="who">Not signed in</small></span></div>
+    <div class="top-act">
+      <a class="btn ghost sm" href="../" target="_blank" rel="noopener">View shop</a>
+      <button class="btn gold" id="pubBtn" disabled>Publish <span class="cnt" id="pendCnt">0</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- sign in -->
+  <section id="signin" class="panel" hidden>
+    <h1>Sign in to edit your shop</h1>
+    <p class="muted">Paste your GitHub access token once. It stays only in this browser on this device. Nobody else can publish without it.</p>
+    <label class="fld"><span>GitHub token</span><input id="tokIn" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…"></label>
+    <button class="btn gold block" id="tokSave">Sign in</button>
+    <p class="err" id="tokErr" hidden></p>
+    <details class="help"><summary>How do I get a token?</summary>
+      <ol>
+        <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a> (signed in as <b>a050121</b>).</li>
+        <li>Name: <i>card shop editor</i>. Expiration: the longest offered.</li>
+        <li>Repository access: <b>Only select repositories</b> → <b>a050121/card-shop</b>.</li>
+        <li>Permissions → Repository permissions → <b>Contents: Read and write</b>. Leave everything else alone.</li>
+        <li>Click <b>Generate token</b>, copy it, paste it above.</li>
+      </ol>
+    </details>
+  </section>
+
+  <section id="app" hidden>
+    <div class="bar">
+      <div class="search"><input id="q" type="search" placeholder="Search name, team, set, serial or #id" autocomplete="off" enterkeyhint="search"></div>
+      <button class="btn gold" id="addBtn">+ Add card</button>
+    </div>
+    <div class="chips" id="chips">
+      <button data-f="" class="on">All</button>
+      <button data-f="edited">Unpublished</button>
+      <button data-f="feat">Featured</button>
+      <button data-f="sale">On sale</button>
+      <button data-f="rs">Reserved</button>
+      <button data-f="x">Sold</button>
+      <button data-f="new">Added</button>
+      <select id="sportF" aria-label="Sport"><option value="">All sports</option></select>
+      <button id="specBtn" class="ghostchip">Specials sections…</button>
+    </div>
+    <p class="muted small" id="resInfo"></p>
+    <div class="list" id="list"></div>
+    <button class="btn ghost block" id="more" hidden>Show more</button>
+    <p class="muted small foot">Changes are saved on this device until you press <b>Publish</b>. After publishing, the shop updates in about 1–2 minutes (sometimes up to 10). <button class="linkbtn" id="signout">Sign out on this device</button></p>
+  </section>
+  <section id="loading" class="panel"><p class="muted">Loading…</p></section>
+</main>
+
+<!-- edit sheet -->
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="shTitle">
+  <div class="sh-in">
+    <div class="sh-head"><h2 id="shTitle">Edit card</h2><button class="x" id="shClose" aria-label="Close">×</button></div>
+    <div class="sh-body">
+      <div class="photo">
+        <img id="shImg" alt="">
+        <div class="ph-empty" id="shImgEmpty">No photo yet</div>
+        <label class="btn ghost sm filebtn"><input id="shFile" type="file" accept="image/*"><span id="shFileLbl">Replace photo</span></label>
+        <small class="muted" id="shImgNote"></small>
+      </div>
+      <div class="fields">
+        <label class="fld"><span>Player / name</span><input id="fP" autocomplete="off"></label>
+        <div class="row2">
+          <label class="fld"><span>Price ($)</span><input id="fPrice" type="number" inputmode="decimal" min="0" step="0.01"></label>
+          <label class="fld"><span>Serial</span><input id="fN" placeholder="1/1, /5, 3/10…" autocomplete="off"></label>
+        </div>
+        <label class="fld"><span>Team</span><input id="fT" list="teams" autocomplete="off"></label>
+        <div class="row2">
+          <label class="fld"><span>Set</span><input id="fS" list="sets" autocomplete="off"></label>
+          <label class="fld"><span>Rarity</span><input id="fR" list="rars" autocomplete="off"></label>
+        </div>
+        <label class="fld"><span>Sport</span><select id="fG"></select></label>
+        <div class="checks">
+          <label><input type="checkbox" id="fA"> Autograph</label>
+          <label><input type="checkbox" id="fW"> Award</label>
+          <label><input type="checkbox" id="fF"> Featured</label>
+          <label><input type="checkbox" id="fSpot"> Spotlight card</label>
+        </div>
+        <div class="fld"><span>Status</span>
+          <div class="seg" id="fStat"><button data-v="avail">Available</button><button data-v="rs">Reserved</button><button data-v="x">Sold</button></div>
+        </div>
+        <div class="sale">
+          <label class="chk"><input type="checkbox" id="fSale"> On sale</label>
+          <div id="saleBox" hidden>
+            <div class="row2">
+              <label class="fld"><span>Sale price ($)</span><input id="fSp" type="number" inputmode="decimal" min="0" step="0.01"></label>
+              <label class="fld"><span>Specials section</span><select id="fSx"></select></label>
+            </div>
+            <small class="muted">Sale price must be below the normal price. Badge and end date are set per section (Specials sections…).</small>
+          </div>
+        </div>
+        <p class="muted small" id="shMeta"></p>
+        <p class="err" id="shErr" hidden></p>
+      </div>
+    </div>
+    <div class="sh-foot">
+      <button class="btn ghost" id="shRevert" hidden>Undo my changes</button>
+      <span class="sp"></span>
+      <button class="btn ghost" id="shCancel">Cancel</button>
+      <button class="btn gold" id="shSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- crop -->
+<div class="sheet" id="crop" hidden role="dialog" aria-modal="true" aria-label="Crop photo">
+  <div class="sh-in">
+    <div class="sh-head"><h2>Crop to the card</h2><button class="x" id="cropClose" aria-label="Close">×</button></div>
+    <p class="muted small pad">Drag the box over the card. Drag the gold corner to resize.</p>
+    <div class="crop-stage" id="cropStage"><img id="cropImg" alt=""><div class="crop-box" id="cropBox"><span class="h" id="cropH"></span></div></div>
+    <div class="sh-foot">
+      <label class="chk"><input type="checkbox" id="cropLock" checked> Card shape</label>
+      <button class="btn ghost sm" id="cropFull">Whole photo</button>
+      <span class="sp"></span>
+      <button class="btn gold" id="cropOk">Use photo</button>
+    </div>
+  </div>
+</div>
+
+<!-- specials sections -->
+<div class="sheet" id="specs" hidden role="dialog" aria-modal="true" aria-labelledby="spTitle">
+  <div class="sh-in">
+    <div class="sh-head"><h2 id="spTitle">Specials sections</h2><button class="x" id="spClose" aria-label="Close">×</button></div>
+    <div class="sh-body col" id="spBody"></div>
+    <div class="sh-foot"><button class="btn ghost" id="spAdd">+ New section</button><span class="sp"></span><button class="btn gold" id="spDone">Done</button></div>
+  </div>
+</div>
+
+<!-- publish -->
+<div class="sheet" id="pub" hidden role="dialog" aria-modal="true" aria-labelledby="pbTitle">
+  <div class="sh-in">
+    <div class="sh-head"><h2 id="pbTitle">Publish changes</h2><button class="x" id="pbClose" aria-label="Close">×</button></div>
+    <div class="sh-body col"><ul class="sum" id="pbList"></ul><p class="muted small" id="pbStatus"></p></div>
+    <div class="sh-foot"><button class="btn ghost" id="pbDiscard">Discard all</button><span class="sp"></span><button class="btn gold" id="pbGo">Publish now</button></div>
+  </div>
+</div>
+
+<datalist id="teams"></datalist><datalist id="sets"></datalist><datalist id="rars"></datalist>
+<div class="toast" id="toast" hidden></div>
+<script src="admin.js?v=1793489423"></script>
+</body>
+</html>
