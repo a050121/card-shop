@@ -3,7 +3,7 @@ window.SHOP_CONFIG = {
   "name": "Josh's Topps Collect Shop",
   "tagline": "Digital cards from my Topps collections: NFL, NBA, Bunt and Disney. Pay, and I send the card to your account in the app.",
   "currency": "USD",
-  "contact_email": "YOUR_EMAIL@example.com"
+  "contact_email": "joshwilliams.ky@gmail.com"
  },
  "payments": {
   "paypal_client_id": "REPLACE_ME",
@@ -69,5 +69,5 @@ window.SHOP_CONFIG = {
  },
  "specials": [],
  "featured_card_id": 2092,
- "build": "2026-10-31 19:15"
+ "build": "2026-10-31 19:18"
 };
