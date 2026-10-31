@@ -10,6 +10,9 @@
   const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const FINE = matchMedia("(hover: hover) and (pointer: fine)").matches;
 
+  // card images: editor uploads live at img/u/<id>-<version>-t|l.jpg (c.im = version); built ones at img/t|l/<id>.webp
+  const imgT = (c) => (c.im ? `img/u/${c.i}-${c.im}-t.jpg` : `img/t/${c.i}.webp`);
+  const imgL = (c) => (c.im ? `img/u/${c.i}-${c.im}-l.jpg` : `img/l/${c.i}.webp`);
   const LAY = C.layaway || {};
   const r2 = (n) => Math.round(n * 100) / 100;
   const fmtDate = (d) => d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
@@ -74,7 +77,7 @@
     const btn = c.rs ? '<button class="add" disabled>Reserved</button>' : `<button class="add${inCart ? " in" : ""}" data-add="${c.i}" aria-label="${esc(addLabel(c, inCart))}">${inCart ? "✓ In cart" : "+ Add"}</button>`;
     const prem = c._d === 1 ? " t-one" : c.f ? " t-feat" : "";
     return `<article class="tile${c.rs ? " reserved" : ""}${prem}" data-id="${c.i}">
-      <button class="ph tilt" data-open="${c.i}" aria-label="Quick view: ${esc(name(c))}, ${money(price(c))}"><img loading="lazy" decoding="async" src="img/t/${c.i}.webp" alt="${esc(alt(c))}" width="194" height="270"><span class="shine" aria-hidden="true"></span><span class="rib">${tags(c)}</span><span class="qv" aria-hidden="true">Quick view</span></button>
+      <button class="ph tilt" data-open="${c.i}" aria-label="Quick view: ${esc(name(c))}, ${money(price(c))}"><img loading="lazy" decoding="async" src="${imgT(c)}" alt="${esc(alt(c))}" width="194" height="270"><span class="shine" aria-hidden="true"></span><span class="rib">${tags(c)}</span><span class="qv" aria-hidden="true">Quick view</span></button>
       <div class="info"><div class="nm" title="${esc(name(c))}">${esc(name(c))}</div><div class="sub">${esc(sub(c))}</div>
       <div class="buy">${priceHtml(c)}${btn}</div></div></article>`;
   }
@@ -306,7 +309,7 @@
   let tt;
   function toast(m, c, withCart) {
     const t = $("#toast");
-    t.innerHTML = c ? `<img src="img/t/${c.i}.webp" alt=""><span><b>${esc(m)}</b><small>${esc(name(c))} · ${money(price(c))}</small></span>${withCart ? '<button type="button" class="btn gold sm" data-viewcart>View cart</button>' : ""}` : `<span><b>${esc(m)}</b></span>`;
+    t.innerHTML = c ? `<img src="${imgT(c)}" alt=""><span><b>${esc(m)}</b><small>${esc(name(c))} · ${money(price(c))}</small></span>${withCart ? '<button type="button" class="btn gold sm" data-viewcart>View cart</button>' : ""}` : `<span><b>${esc(m)}</b></span>`;
     t.hidden = false; t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
     clearTimeout(tt); tt = setTimeout(() => { t.classList.remove("show"); setTimeout(() => (t.hidden = true), 250); }, 2800);
   }
@@ -350,7 +353,7 @@
     if (src) ctx = ctxFor(src);
     if (!ctx.includes(id)) ctx = [id];
     cur = id;
-    const img = $("#cdImg"); img.classList.remove("ld"); img.onload = () => img.classList.add("ld"); img.src = `img/l/${c.i}.webp`; img.alt = alt(c);
+    const img = $("#cdImg"); img.classList.remove("ld"); img.onload = () => img.classList.add("ld"); img.src = `${imgL(c)}`; img.alt = alt(c);
     $("#cdTags").innerHTML = tags(c, true);
     $("#cdName").textContent = name(c);
     $("#cdSub").textContent = sub(c);
@@ -386,7 +389,7 @@
     $("#spot").hidden = !c; if (!c) return;
     if ($("#spot").dataset.id === String(c.i) && $("#spot").dataset.p === String(price(c))) return;
     $("#spot").dataset.id = c.i; $("#spot").dataset.p = price(c);
-    $("#spotImg").src = `img/l/${c.i}.webp`; $("#spotImg").alt = alt(c);
+    $("#spotImg").src = `${imgL(c)}`; $("#spotImg").alt = alt(c);
     $("#spotTags").innerHTML = tags(c, true);
     $("#spotName").textContent = name(c);
     $("#spotSub").textContent = [c.s, c.t].filter(Boolean).join(" · ");
@@ -408,7 +411,7 @@
   }
   function renderCart() {
     const cs = cartCards();
-    $("#cartItems").innerHTML = cs.length ? cs.map((c) => `<div class="ci"><button class="ci-img" data-open="${c.i}" aria-label="Quick view ${esc(name(c))}"><img src="img/t/${c.i}.webp" alt=""></button><div class="d"><div class="nm">${esc(name(c))}</div><div class="sub">${esc(sub(c))}</div><div class="ci-tags">${tags(c)}</div></div>${priceHtml(c, "p")}<button class="rm" data-add="${c.i}" aria-label="Remove ${esc(name(c))}">×</button></div>`).join("")
+    $("#cartItems").innerHTML = cs.length ? cs.map((c) => `<div class="ci"><button class="ci-img" data-open="${c.i}" aria-label="Quick view ${esc(name(c))}"><img src="${imgT(c)}" alt=""></button><div class="d"><div class="nm">${esc(name(c))}</div><div class="sub">${esc(sub(c))}</div><div class="ci-tags">${tags(c)}</div></div>${priceHtml(c, "p")}<button class="rm" data-add="${c.i}" aria-label="Remove ${esc(name(c))}">×</button></div>`).join("")
       : '<div class="cart-empty"><p><b>Your cart is empty.</b></p><p class="muted small">Browse the vault or search for a player to get started.</p><button class="btn ghost" type="button" data-close>Keep shopping</button></div>';
     const sv = cartSavings();
     $("#cartTotal").innerHTML = (sv > 0 ? `<small class="saved">You save ${money2(sv)}</small> ` : "") + money2(cartTotal());
@@ -500,7 +503,7 @@
     orderCode = "TC-" + Date.now().toString(36).toUpperCase().slice(-6);
     const sv = cartSavings();
     $("#coSummaryLine").innerHTML = `<b>${cart.size} card${cart.size === 1 ? "" : "s"}</b> · ${money2(cartTotal())}${sv > 0 ? ` <span class="saved">(you save ${money2(sv)})</span>` : ""} · order <b>${esc(orderCode)}</b>`;
-    $("#coThumbs").innerHTML = cartCards().slice(0, 8).map((c) => `<img src="img/t/${c.i}.webp" alt="${esc(name(c))}" title="${esc(name(c))} · ${money(price(c))}">`).join("") + (cart.size > 8 ? `<span>+${cart.size - 8}</span>` : "");
+    $("#coThumbs").innerHTML = cartCards().slice(0, 8).map((c) => `<img src="${imgT(c)}" alt="${esc(name(c))}" title="${esc(name(c))} · ${money(price(c))}">`).join("") + (cart.size > 8 ? `<span>+${cart.size - 8}</span>` : "");
     $("#coOk").hidden = true; $("#coErr").hidden = true;
     $("#coUser").value = localStorage.getItem("tc_user") || ""; $("#coEmail").value = localStorage.getItem("tc_email") || "";
     $("#coUser").removeAttribute("aria-invalid"); $("#coEmail").removeAttribute("aria-invalid");
@@ -623,7 +626,7 @@
     car.key = key; car.items = items; car.i = 0;
     $("#carousel").hidden = items.length < 2;
     if (items.length < 2) { stopCar(); return; }
-    $("#carStage").innerHTML = items.map((c, k) => `<button class="car-item tilt" data-open="${c.i}" data-k="${k}" aria-label="Quick view: ${esc(name(c))}${c.n ? " " + esc(c.n) : ""}, ${money(price(c))}"><img src="img/l/${c.i}.webp" alt="${esc(alt(c))}" width="194" height="270" decoding="async"><span class="shine" aria-hidden="true"></span><span class="rib">${tags(c)}</span></button>`).join("");
+    $("#carStage").innerHTML = items.map((c, k) => `<button class="car-item tilt" data-open="${c.i}" data-k="${k}" aria-label="Quick view: ${esc(name(c))}${c.n ? " " + esc(c.n) : ""}, ${money(price(c))}"><img src="${imgL(c)}" alt="${esc(alt(c))}" width="194" height="270" decoding="async"><span class="shine" aria-hidden="true"></span><span class="rib">${tags(c)}</span></button>`).join("");
     $("#carStage").dataset.ctx = "car";
     $("#carDots").innerHTML = items.map((c, k) => `<button type="button" class="dot" data-dot="${k}" aria-label="Show ${esc(name(c))}"></button>`).join("");
     layoutCar(); startCar();
@@ -682,7 +685,7 @@
     $("#tagline").textContent = C.site?.tagline || "";
     $("#buildInfo").textContent = `Updated ${C.build || ""}` + (C.site?.contact_email && !/example\.com/.test(C.site.contact_email) ? ` · Questions: ${C.site.contact_email}` : "");
     $("#payInfo").textContent = `Payments: PayPal (paypal.me/${P.paypal_me || ""}) or Venmo @${P.venmo_handle || ""}.` + (LAY.enabled ? ` Payment plans on high-end cards: ${LAY.down_pct}% down (non-refundable), 1–${maxWeeks()} weeks.` : "");
-    CARDS = await (await fetch("data/cards.json", { cache: "no-cache" })).json();
+    CARDS = (await (await fetch("data/cards.json", { cache: "no-cache" })).json()).filter((c) => !c.x); // x = sold (kept in the data so the editor can un-sell)
     for (const c of CARDS) {
       const m = /\/\s*(\d+)\s*$/.exec(c.n || "");
       c._d = c.k === "1/1" ? 1 : m ? +m[1] : 0;
