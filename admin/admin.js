@@ -29,7 +29,7 @@
     renderCount();
   }
   function loadPending() { try { const p = JSON.parse(localStorage.getItem(LS("pending")) || "null"); if (p && p.edits) P = { ...emptyPending(), ...p }; } catch (_) {} }
-  const pendN = () => Object.keys(P.edits).length + Object.keys(P.added).filter((id) => !P.edits[id]).length + Object.keys(P.imgs).filter((id) => !P.edits[id] && !P.added[id]).length + (("featured_card_id" in P.cfg) ? 1 : 0) + (P.cfg.specials ? 1 : 0);
+  const pendN = () => { const ids = new Set([...Object.keys(P.edits), ...Object.keys(P.added), ...Object.keys(P.imgs)]); return ids.size + (("featured_card_id" in P.cfg) ? 1 : 0) + (P.cfg.specials && !ids.size ? 1 : 0); };
   const isPend = (id) => !!(P.edits[id] || P.added[id] || P.imgs[id]);
 
   const cfg = () => ({ ...base.cfg, ...("featured_card_id" in P.cfg ? { featured_card_id: P.cfg.featured_card_id } : {}), specials: P.cfg.specials || base.cfg.specials || [] });
@@ -54,6 +54,10 @@
   const thumb = (c) => P.imgs[c.i]?.t || (c.im ? (base.imSha?.[c.i] ? `${RAW}/${OWNER}/${REPO}/${base.sha}/img/u/${c.i}-${c.im}-t.jpg` : `../img/u/${c.i}-${c.im}-t.jpg`) : `../img/t/${c.i}.webp`);
   const large = (c) => P.imgs[c.i]?.l || (c.im ? (base.imSha?.[c.i] ? `${RAW}/${OWNER}/${REPO}/${base.sha}/img/u/${c.i}-${c.im}-l.jpg` : `../img/u/${c.i}-${c.im}-l.jpg`) : `../img/l/${c.i}.webp`);
 
+  const rawImg = (c, z) => `${RAW}/${OWNER}/${REPO}/${base.sha}/img/u/${c.i}-${c.im}-${z}.jpg`;
+  // a just-uploaded photo isn't on the website for a minute or two: fall back to the repo copy
+  document.addEventListener("error", (e) => { const i = e.target; if (i.tagName === "IMG" && i.dataset.raw && i.src !== i.dataset.raw) i.src = i.dataset.raw; }, true);
+
   // ---------- GitHub ----------
   async function gh(path, opt = {}) {
     const r = await fetch(API + path, { ...opt, headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + TOKEN, "X-GitHub-Api-Version": "2022-11-28", ...(opt.body ? { "Content-Type": "application/json" } : {}) }, cache: "no-store" });
@@ -69,7 +73,7 @@
     const cards = JSON.parse(cj), cfgv = parseCfg(cf);
     // cards whose uploaded image may not be on the website yet are read straight from the repo at this commit
     const lastPub = JSON.parse(localStorage.getItem(LS("lastpub")) || "{}");
-    const imSha = {}; if (lastPub.t && Date.now() - lastPub.t < 15 * 60e3) for (const id of lastPub.ids || []) imSha[id] = 1;
+    const imSha = {}; for (const [id, t] of Object.entries(lastPub.ids || {})) if (Date.now() - t < 15 * 60e3) imSha[id] = 1;
     return { sha, cards, cfg: cfgv, imSha };
   }
 
@@ -95,7 +99,7 @@
     v.sort((a, b) => (isPend(b.i) - isPend(a.i)) || (b.f - a.f) || (b.$ - a.$) || a.i - b.i);
     if (/^#?\d+$/.test(q)) { const id = +q.replace("#", ""); v.sort((a, b) => (b.i === id) - (a.i === id)); }
     $("#resInfo").textContent = `${v.length.toLocaleString()} card${v.length === 1 ? "" : "s"}` + (st.q || st.f || st.g ? " match" : "") + ` · ${all.filter((c) => !c.x).length.toLocaleString()} listed, ${all.filter((c) => c.x).length} sold`;
-    $("#list").innerHTML = v.slice(0, st.shown).map((c) => `<button class="it${isPend(c.i) ? " pend" : ""}" data-id="${c.i}"><img loading="lazy" src="${esc(thumb(c))}" alt=""><span class="mid"><div class="nm">${esc(c.p || "(no name)")}</div><div class="sub">#${c.i} · ${esc([c.t, c.s, c.n, c.g].filter(Boolean).join(" · "))}</div><div class="tags">${tagsOf(c)}</div></span><span class="pr">${c.sp != null ? `<s>${money(c.$)}</s>${money(c.sp)}` : money(c.$)}</span></button>`).join("") || `<p class="muted">No cards found.</p>`;
+    $("#list").innerHTML = v.slice(0, st.shown).map((c) => `<button class="it${isPend(c.i) ? " pend" : ""}" data-id="${c.i}"><img loading="lazy" src="${esc(thumb(c))}" alt=""${c.im && !P.imgs[c.i] ? ` data-raw="${esc(rawImg(c, "t"))}"` : ""}><span class="mid"><div class="nm">${esc(c.p || "(no name)")}</div><div class="sub">#${c.i} · ${esc([c.t, c.s, c.n, c.g].filter(Boolean).join(" · "))}</div><div class="tags">${tagsOf(c)}</div></span><span class="pr">${c.sp != null ? `<s>${money(c.$)}</s>${money(c.sp)}` : money(c.$)}</span></button>`).join("") || `<p class="muted">No cards found.</p>`;
     $("#more").hidden = v.length <= st.shown;
   }
   function tagsOf(c) {
@@ -130,16 +134,16 @@
     $("#fSpot").checked = +cfg().featured_card_id === c.i && !isNew;
     curStat = c.x ? "x" : c.rs ? "rs" : "avail"; segSet();
     $("#fSale").checked = c.sp != null; $("#saleBox").hidden = c.sp == null; $("#fSp").value = c.sp ?? ""; fillSx(c.sx);
-    showImg(isNew && !P.imgs[c.i] ? "" : large(c));
+    showImg(isNew && !P.imgs[c.i] ? "" : large(c), c.im && !P.imgs[c.i] && !isNew ? rawImg(c, "l") : "");
     $("#shFileLbl").textContent = isNew && !P.imgs[c.i] ? "Add photo" : "Replace photo";
     $("#shImgNote").textContent = "";
     $("#shRevert").hidden = isNew || !isPend(c.i);
     $("#shMeta").textContent = isNew ? "A new card gets the next free id when saved." : `Card id #${c.i}${c.k ? " · serial tier " + c.k : ""}${c.l ? " · payment plan eligible" : ""}`;
     $("#shErr").hidden = true;
-    $("#sheet").hidden = false; document.body.style.overflow = "hidden";
+    $("#sheet").hidden = false; document.body.style.overflow = "hidden"; $("#sheet .sh-body").scrollTop = 0;
     setTimeout(() => (isNew ? $("#fP") : $("#fPrice")).focus({ preventScroll: true }), 50);
   }
-  function showImg(src) { $("#shImg").hidden = !src; $("#shImgEmpty").hidden = !!src; if (src) $("#shImg").src = src; }
+  function showImg(src, rawSrc) { $("#shImg").hidden = !src; $("#shImgEmpty").hidden = !!src; if (rawSrc) $("#shImg").dataset.raw = rawSrc; else delete $("#shImg").dataset.raw; if (src) $("#shImg").src = src; }
   function segSet() { $$("#fStat button").forEach((b) => b.classList.toggle("on", b.dataset.v === curStat)); }
   function closeSheet(id) { $(id).hidden = true; if ($$(".sheet").every((s) => s.hidden)) document.body.style.overflow = ""; }
   function shErr(m) { $("#shErr").textContent = m; $("#shErr").hidden = false; }
@@ -236,9 +240,17 @@
     const down = (mode) => (e) => { e.preventDefault(); e.stopPropagation(); drag = { mode, x: e.clientX, y: e.clientY, b: { ...box } }; e.target.setPointerCapture?.(e.pointerId); };
     $("#cropBox").addEventListener("pointerdown", down("move"));
     $("#cropH").addEventListener("pointerdown", down("size"));
+    $("#cropTL").addEventListener("pointerdown", down("tl"));
     const move = (e) => {
       if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y, b = { ...drag.b };
       if (drag.mode === "move") { b.x += dx; b.y += dy; }
+      else if (drag.mode === "tl") { // top-left corner: keep the bottom-right corner fixed
+        const rx = drag.b.x + drag.b.w, ry = drag.b.y + drag.b.h;
+        b.x = Math.max(0, Math.min(rx - 30, drag.b.x + dx)); b.w = rx - b.x;
+        if ($("#cropLock").checked) { b.h = b.w / AR; if (ry - b.h < 0) { b.h = ry; b.w = b.h * AR; b.x = rx - b.w; } }
+        else b.h = ry - Math.max(0, Math.min(ry - 30, drag.b.y + dy));
+        b.y = ry - b.h;
+      }
       else { b.w = drag.b.w + dx; b.h = $("#cropLock").checked ? b.w / AR : drag.b.h + dy; const s = stageSize(); if (b.x + b.w > s.w) { b.w = s.w - b.x; if ($("#cropLock").checked) b.h = b.w / AR; } if (b.y + b.h > s.h) { b.h = s.h - b.y; if ($("#cropLock").checked) b.w = b.h * AR; } }
       setBox(b);
     };
@@ -258,7 +270,7 @@
     curImg = { ver: Date.now().toString(36), t: T.url, l: L.url, w: L.w, h: L.h };
     showImg(L.url); $("#shFileLbl").textContent = "Replace photo";
     $("#shImgNote").textContent = `New photo ${L.w}×${L.h}${L.w < 300 ? " (small source, may look soft)" : ""}. Saved when you press Save.`;
-    closeSheet("#crop"); $("#sheet").hidden = false; document.body.style.overflow = "hidden";
+    closeSheet("#crop"); $("#sheet").hidden = false; document.body.style.overflow = "hidden"; $("#sheet .sh-body").scrollTop = 0;
   }
 
   // ---------- specials sections ----------
@@ -346,7 +358,10 @@
         try { await gh(`${R}/git/refs/heads/${BRANCH}`, { method: "PATCH", body: JSON.stringify({ sha: nc.sha, force: false }) }); }
         catch (e) { if (e.status === 422 || e.status === 409) continue; throw e; } // someone published in between: retry on top
         const imgIds = Object.keys(P.imgs).map(Number);
-        localStorage.setItem(LS("lastpub"), JSON.stringify({ t: Date.now(), ids: imgIds, sha: nc.sha }));
+        const lp = JSON.parse(localStorage.getItem(LS("lastpub")) || "{}"), lpIds = {};
+        for (const [id, t] of Object.entries(lp.ids && !Array.isArray(lp.ids) ? lp.ids : {})) if (Date.now() - t < 15 * 60e3) lpIds[id] = t;
+        imgIds.forEach((id) => (lpIds[id] = Date.now()));
+        localStorage.setItem(LS("lastpub"), JSON.stringify({ ids: lpIds, sha: nc.sha }));
         P = emptyPending(); savePending();
         base = await loadBase(nc.sha); rebuild(); render();
         closeSheet("#pub"); toast("Published! The shop updates in about 1–2 minutes.");

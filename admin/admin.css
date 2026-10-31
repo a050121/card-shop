@@ -61,12 +61,13 @@ input[type=checkbox]{width:20px;height:20px;accent-color:var(--gold);flex:none}
 .seg button.on{background:var(--s3);color:var(--txt);box-shadow:inset 0 0 0 1px var(--line2)}
 .seg button.on[data-v=x]{color:var(--red)}.seg button.on[data-v=rs]{color:var(--blue)}.seg button.on[data-v=avail]{color:var(--ok)}
 .sale{background:var(--s2);border-radius:12px;padding:10px 12px;margin-bottom:10px}.sale .row2{margin-top:10px}
-.crop-stage{position:relative;margin:0 16px;align-self:center;touch-action:none;user-select:none;-webkit-user-select:none;max-height:62vh}
+.crop-stage{position:relative;overflow:hidden;margin:0 16px;align-self:center;touch-action:none;user-select:none;-webkit-user-select:none;max-height:62vh}
 .crop-stage img{display:block;max-width:100%;max-height:62vh;max-height:62dvh;pointer-events:none}
 .crop-box{position:absolute;border:2px solid var(--gold);box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move;touch-action:none}
-.crop-box .h{position:absolute;right:-14px;bottom:-14px;width:28px;height:28px;border-radius:99px;background:var(--gold);border:3px solid #1a1204;cursor:nwse-resize;touch-action:none}
+.crop-box .h{position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:99px;background:var(--gold);border:3px solid #1a1204;cursor:nwse-resize;touch-action:none}
 .spr{background:var(--s2);border-radius:14px;padding:12px;display:grid;gap:8px}
 .spr .row2{grid-template-columns:1fr 1fr}
 .sum{margin:0;padding-left:20px}.sum li{margin:5px 0}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--s3);border:1px solid var(--line2);padding:10px 16px;border-radius:12px;z-index:80;font-weight:700;max-width:90vw}
+.toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--s3);border:1px solid var(--line2);padding:10px 16px;border-radius:12px;z-index:80;font-weight:700;max-width:90vw}
 .toast.bad{border-color:var(--red);color:#ffd2d6}
+.crop-box .h.tl{right:auto;bottom:auto;left:-2px;top:-2px;cursor:nwse-resize}
