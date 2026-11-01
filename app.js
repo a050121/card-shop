@@ -63,7 +63,7 @@
     if (saleLive(c)) t.push(`<span class="tag sale">${esc(c.sb || "Sale")}</span>`);
     if (c._d) t.push(`<span class="tag ${serClass(c._d)}">${c._d === 1 ? "1/1" : esc(c.n)}</span>`);
     if (c.a) t.push('<span class="tag auto">Auto</span>');
-    if (c.w) t.push('<span class="tag awd">Award</span>');
+    if (c.w) t.push('<span class="tag awd">👑 Award</span>');
     if (c.rs) t.push('<span class="tag rsv">On layaway · Reserved</span>');
     else if (c.l && LAY.enabled) t.push(`<span class="tag lay">${full ? "Payment plan available" : "Plan"}</span>`);
     if (full || c.r === "Legendary") t.push(`<span class="tag ${c.r === "Legendary" ? "leg" : "ico"}">${esc(c.r)}</span>`);
