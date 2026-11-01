@@ -69,5 +69,5 @@ window.SHOP_CONFIG = {
  },
  "specials": [],
  "featured_card_id": 2092,
- "build": "2026-10-31 20:52"
+ "build": "2026-10-31 20:53"
 };
