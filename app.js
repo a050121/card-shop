@@ -76,10 +76,11 @@
     const inCart = cart.has(c.i);
     const btn = c.rs ? '<button class="add" disabled>Reserved</button>' : `<button class="add${inCart ? " in" : ""}" data-add="${c.i}" aria-label="${esc(addLabel(c, inCart))}">${inCart ? "✓ In cart" : "+ Add"}</button>`;
     const prem = c._d === 1 ? " t-one" : c.f ? " t-feat" : "";
+    const offer = c.x ? "" : `<button class="offer" data-offer="${c.i}" aria-label="Make an offer on ${esc(name(c))}">Make offer</button>`;
     return `<article class="tile${c.rs ? " reserved" : ""}${prem}" data-id="${c.i}">
       <button class="ph tilt" data-open="${c.i}" aria-label="Quick view: ${esc(name(c))}, ${money(price(c))}"><img loading="lazy" decoding="async" src="${imgT(c)}" alt="${esc(alt(c))}" width="194" height="270"><span class="shine" aria-hidden="true"></span><span class="rib">${tags(c)}</span><span class="qv" aria-hidden="true">Quick view</span></button>
       <div class="info"><div class="nm" title="${esc(name(c))}">${esc(name(c))}</div><div class="sub">${esc(sub(c))}</div>
-      <div class="buy">${priceHtml(c)}${btn}</div></div></article>`;
+      <div class="buy">${priceHtml(c)}${btn}</div>${offer}</div></article>`;
   }
 
   // ---------- filtering ----------
@@ -252,6 +253,8 @@
   document.addEventListener("click", (e) => {
     const add = e.target.closest("[data-add]");
     if (add) { toggleCart(+add.dataset.add); return; }
+    const of = e.target.closest("[data-offer]");
+    if (of) { openOffer(+of.dataset.offer); return; }
     const op = e.target.closest("[data-open]");
     if (op) { openCard(+op.dataset.open, op); return; }
     if (e.target.closest("[data-viewcart]")) { openCart(); return; }
@@ -360,6 +363,7 @@
     $("#cdMeta").innerHTML = metaRows(c);
     $("#cdPrice").innerHTML = bigPrice(c);
     const b = $("#cdAdd"); b.dataset.add = c.i; b.disabled = !!c.rs; syncAddButtons(c.i);
+    $("#cdOffer").dataset.offer = c.i; $("#cdOffer").hidden = !!c.x;
     $("#cdPos").textContent = ctx.length > 1 ? `${ctx.indexOf(id) + 1} of ${ctx.length.toLocaleString()}` : "";
     $("#cdPrev").hidden = $("#cdNext").hidden = ctx.length < 2;
     const pb = $("#cdPlan");
@@ -533,6 +537,71 @@
     await notify("manual (PayPal.me/Venmo)", null);
     done(`Order <b>${orderCode}</b> submitted. Send <b>${money2(dueToday())}</b> to PayPal.me/${esc(P.paypal_me)} or Venmo @${esc(P.venmo_handle)} with <b>${orderCode}</b> in the note. ${isPlan() ? "Your plan card(s) are reserved; keep paying on the schedule and they're sent after the final payment." : `Cards go to <b>${esc(buyer().user)}</b> once payment arrives.`}`, false);
   };
+
+  // ---------- make an offer ----------
+  let ofCard = null;
+  const realEndpoint = (ep) => /^https:\/\/formspree\.io\/f\/[A-Za-z0-9]+$/.test(ep || "");
+  function openOffer(id) {
+    const c = BYID.get(id); if (!c || c.x) return;
+    ofCard = c;
+    $("#ofCard").innerHTML = `<img src="${imgT(c)}" alt="${esc(alt(c))}" width="97" height="135"><div><div class="nm">${esc(name(c))}</div><div class="sub muted small">#${c.i} · ${esc(sub(c))}</div>${c.n ? `<div class="small"><span class="muted">Serial</span> <b>${esc(c.n)}</b></div>` : ""}<div class="of-price"><span class="muted small">Listed</span> ${priceHtml(c, "p")}</div>${c.rs ? '<div class="small muted">On layaway right now. You can still make an offer in case it frees up.</div>' : ""}</div>`;
+    $("#ofAmt").value = ""; $("#ofNote").value = ""; $("#ofHint").textContent = "";
+    $("#ofUser").value = localStorage.getItem("tc_user") || ""; $("#ofEmail").value = localStorage.getItem("tc_email") || "";
+    $$("#ofForm input").forEach((i) => i.removeAttribute("aria-invalid"));
+    $("#ofErr").hidden = true; $("#ofOk").hidden = true; $("#ofFormWrap").hidden = false; $("#ofSend").disabled = false; $("#ofSend").textContent = "Send offer";
+    open("#offerModal");
+    setTimeout(() => $("#ofAmt").focus({ preventScroll: true }), 60);
+  }
+  const offerAmt = () => { const v = parseFloat(String($("#ofAmt").value).replace(/[$,\s]/g, "")); return isFinite(v) ? r2(v) : NaN; };
+  $("#ofAmt").addEventListener("input", () => {
+    const v = offerAmt(), p = ofCard ? price(ofCard) : 0; $("#ofAmt").removeAttribute("aria-invalid");
+    $("#ofHint").textContent = v > 0 && v >= p ? "That's at or above the listed price, so you can just add it to your cart." : v > 0 ? `${Math.min(99, Math.max(1, Math.round((1 - v / p) * 100)))}% below the listed ${money(p)}.` : "";
+  });
+  ["#ofAmt", "#ofUser", "#ofEmail"].forEach((s) => $(s).addEventListener("input", () => { $(s).removeAttribute("aria-invalid"); if (!$$("#ofForm [aria-invalid=true]").length) $("#ofErr").hidden = true; }));
+  function offerText(o) {
+    const c = o.c;
+    return [`Offer on #${c.i} ${name(c)}`, ``, `Card: #${c.i} ${name(c)}`, `Serial: ${c.n || "-"}`, `Listed price: ${money2(price(c))}${saleLive(c) ? ` (sale; normally ${money2(c.$)})` : ""}`,
+      `Offer: ${money2(o.amt)}`, `Topps Collect username (IGN): ${o.user}`, `Email: ${o.email}`, `Note: ${o.note || "-"}`, ``,
+      `OFFER id=${c.i} offer=${o.amt.toFixed(2)} listed=${price(c).toFixed(2)} ign=${o.user.replace(/\s+/g, "_")} email=${o.email} date=${todayStr}`].join("\n");
+  }
+  $("#ofForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const c = ofCard; if (!c) return;
+    const o = { c, amt: offerAmt(), user: $("#ofUser").value.trim(), email: $("#ofEmail").value.trim(), note: $("#ofNote").value.trim() };
+    const bad = [];
+    if (!(o.amt > 0)) bad.push(["#ofAmt", "Enter an offer amount above $0."]);
+    if (!o.user) bad.push(["#ofUser", "Enter your Topps Collect username."]);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.email)) bad.push(["#ofEmail", "Enter a valid email so I can reply."]);
+    bad.forEach(([s]) => $(s).setAttribute("aria-invalid", "true"));
+    if (bad.length) { $("#ofErr").textContent = bad.map((b) => b[1]).join(" "); $("#ofErr").hidden = false; $(bad[0][0]).focus(); return; }
+    $("#ofErr").hidden = true;
+    localStorage.setItem("tc_user", o.user); localStorage.setItem("tc_email", o.email);
+    const body = offerText(o), subject = `Offer: ${name(c)} #${c.i}`;
+    const ep = C.orders?.formspree_endpoint;
+    let sent = false;
+    if (realEndpoint(ep)) {
+      $("#ofSend").disabled = true; $("#ofSend").textContent = "Sending…";
+      try {
+        const r = await fetch(ep, { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ _subject: subject, type: "offer", card_id: c.i, card: name(c), serial: c.n || "", listed_price: price(c).toFixed(2), offer: o.amt.toFixed(2), topps_username: o.user, email: o.email, _replyto: o.email, note: o.note, offer_line: body.split("\n").pop(), summary: body }) });
+        sent = r.ok;
+      } catch (err) { console.warn("offer post failed, using email instead", err); }
+    }
+    const to = C.site?.contact_email || "";
+    const mail = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.__lastOffer = { sent, mail, body, subject };
+    $("#ofFormWrap").hidden = true;
+    if (sent) {
+      $("#ofOk").innerHTML = `<b>Offer sent!</b> Josh will reply by email to <b>${esc(o.email)}</b>.`;
+    } else {
+      $("#ofOk").innerHTML = `<b>Almost done.</b> Your email app opened with the offer filled in. <b>Press Send</b> there and Josh will reply by email.
+        <div class="of-alt small muted">Email didn't open? <a href="${esc(mail)}">Tap here</a>, or copy the offer and email it to <a href="mailto:${esc(to)}">${esc(to)}</a>.</div>
+        <textarea readonly rows="7" aria-label="Your offer">${esc(body)}</textarea><button class="btn ghost sm" type="button" id="ofCopy">Copy offer</button>`;
+      $("#ofCopy").onclick = async () => { try { await navigator.clipboard.writeText(body); } catch { const t = $("#ofOk textarea"); t.select(); document.execCommand("copy"); } toast("Offer copied"); };
+      const a = document.createElement("a"); a.href = mail; a.rel = "noopener"; a.style.display = "none"; document.body.appendChild(a); a.click(); a.remove();
+    }
+    $("#ofOk").hidden = false;
+  });
 
   async function notify(method, paypalDetails) {
     const ep = C.orders?.formspree_endpoint;

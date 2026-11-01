@@ -447,6 +447,23 @@ textarea{height:auto!important;padding:10px!important;width:100%;font:12.5px/1.4
   .pb-sum b{font-size:17px}
   .steps-mini{display:none}
 }
+/* make an offer */
+.offer{margin-top:7px;width:100%;border:1px dashed var(--line2);background:transparent;color:var(--mut);font-weight:700;font-size:12px;border-radius:10px;padding:6px 10px;transition:color .2s,border-color .2s,background .2s}
+.offer:hover{color:var(--gold);border-color:rgba(245,192,74,.6);background:rgba(245,192,74,.06)}
+.cd-buy .offer-big{flex:none}
+.offer-box{max-width:480px;padding:24px}
+.offer-box h3{margin:0 40px 14px 0;font-family:var(--disp);font-size:24px;letter-spacing:-.4px}
+.of-card{display:flex;gap:14px;align-items:center;padding:12px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.of-card img{width:78px;height:auto;aspect-ratio:194/270;object-fit:cover;border-radius:8px;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+.of-card .nm{font-weight:800;font-size:16px;line-height:1.2}
+.of-price{margin-top:6px;display:flex;align-items:baseline;gap:8px;font-weight:900;font-size:18px}
+.of-hint{margin:-6px 2px 0;min-height:1em}
+.of-fine{margin:0;text-align:center}
+.of-ok textarea{margin-top:10px}.of-ok .btn{margin-top:8px}.of-alt{margin-top:8px}
+@media (max-width:640px){
+  .offer-box{padding:18px 16px 30px}
+  .cd-buy .offer-big{width:100%}
+}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
